@@ -12,7 +12,7 @@ function symlink {
 		mv -v "$target" "$target-waldon-backup";
     fi
 	# overwrite symlink
-	ln -svf "$(realpath $source)" "$target"
+	ln -svTnf "$(realpath $source)" "$target"
 }
 
 symlink "$HOME/.bash_profile" "$BASEDIR/bash_profile"
