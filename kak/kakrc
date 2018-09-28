@@ -1,0 +1,52 @@
+# Enable favorite colors
+colorscheme desertex
+
+set-option global aligntab false
+set-option global tabstop 4
+set-option global indentwidth 4
+# Always number lines
+add-highlighter global/ number-lines
+# Always soft-wrap lines
+add-highlighter global/ wrap -word -indent
+
+# enable kak-lsp to do it's work
+#evaluate-commands %sh{kak-lsp --kakoune -s $kak_session}
+
+#lsp-auto-hover-enable
+
+# Easy way to open/edit config
+map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
+map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
+map -docstring "start rover" global user r :terminal<space>rover<ret>
+map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
+map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
+
+define-command -docstring "copy main selection to X11 clipboard" xcopy %{
+    nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
+}
+
+define-command -docstring "paste X11 clipboard at cursor" xpaste %{
+    exec \i %sh{ xclip -selection clipboard -o } <esc>
+}
+
+# Register custom hooks whenever I open a markdown file.
+# Because the filename filter is a regex, the literal period
+# must be escaped
+hook global BufCreate .*\.md %{
+    # Print in the debug buffer so that I can tell the hook fired
+    echo -debug "Markdown Mode Enabled"
+    # Create easy user-mode mapping to format tables
+    map -docstring "format markdown table under cursor" buffer user t :md-format-table<ret>
+    map -docstring "begin live-previewing this document in Firefox" buffer user p :md-preview<ret>
+}
+
+define-command terminal -params .. %{
+  evaluate-commands shell \
+    -export session \
+    -export client \
+    %sh{
+    	cmd="tmux split-window -h -b -l20 env KAK_SESSION=${kak_session} KAK_CLIENT=${kak_client} EDITOR=kak-connect %arg(@) "
+        test $# = 0 && cmd="$cmd $SHELL"
+        echo $cmd
+    }
+}
