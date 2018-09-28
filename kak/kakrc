@@ -4,6 +4,8 @@ colorscheme desertex
 set-option global aligntab false
 set-option global tabstop 4
 set-option global indentwidth 4
+map global insert <tab> '<a-;><gt>'
+map global insert <s-tab> '<a-;><lt>'
 # Always number lines
 add-highlighter global/ number-lines
 # Always soft-wrap lines

@@ -3,16 +3,16 @@ set -x
 BASEDIR="$(dirname $0)"
 
 function symlink {
-	# symlink ensures that there is a link at $target that points to $source.
+    # symlink ensures that there is a link at $target that points to $source.
     local target="$1"
     local source="$2"
 
     # back up the file if it isn't already a symlink
-	if [ ! -L "$target" -a -e "$target" ] ; then
-		mv -v "$target" "$target-waldon-backup";
+    if [ ! -L "$target" -a -e "$target" ] ; then
+        mv -v "$target" "$target-waldon-backup";
     fi
-	# overwrite symlink
-	ln -svTnf "$(realpath $source)" "$target"
+    # overwrite symlink
+    ln -svTnf "$(realpath $source)" "$target"
 }
 
 symlink "$HOME/.bash_profile" "$BASEDIR/bash_profile"
