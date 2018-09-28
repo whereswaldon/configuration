@@ -1,0 +1,12 @@
+XF86MonBrightnessDown
+  gdimmer -down
+XF86MonBrightnessUp
+  gdimmer -up
+super + r
+  pkill -USR1 sxhkd
+super + shift + l
+  slock
+super + s
+  scrot -e 'mv $f ~/Pictures/Screenshots/'
+super + shift + s
+   (while ! scrot -s -e 'mv $f ~/Pictures/Screenshots/'; do sleep 0.1; done) &
