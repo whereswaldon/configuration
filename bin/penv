@@ -1,0 +1,4 @@
+#!/bin/sh
+var=$1
+pid=$2
+exec gawk -v 'RS=\0' -F= '$1=="'$var'" {print $2}' "/proc/$pid/environ"

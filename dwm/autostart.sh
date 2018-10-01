@@ -1,1 +1,1 @@
-/home/waldon/.local/bin/dwm.sh
+../bin/dwm.sh
