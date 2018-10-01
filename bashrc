@@ -16,6 +16,11 @@ export PATH="$PATH:$GOPATH/bin"
 export EDITOR="$(which kak)"
 export XML_CATALOG_FILES=/usr/local/etc/xml/catalog
 
+# Pick up tweaks specific to this host, if any
+if [ -f "$HOME/.config/tweak-env" ]; then
+    . "$HOME/.config/tweak-env"
+fi
+
 default_tmux="base"
 if [ -z "$TMUX" ] ; then
     # launch tmux if it isn't running
