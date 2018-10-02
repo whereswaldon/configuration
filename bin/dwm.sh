@@ -7,6 +7,10 @@ set -x
 # Enable all monitors that are actually connected
 xrandr --auto
 
+if [ -e "$HOME/.config/tweak-dwm-setup" ]; then
+    source "$HOME/.config/tweak-dwm-setup"
+fi
+
 # laptop="eDP"
 # mon1="DisplayPort-2"
 # mon2="DisplayPort-0"
