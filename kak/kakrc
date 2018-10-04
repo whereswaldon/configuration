@@ -6,10 +6,13 @@ set-option global tabstop 4
 set-option global indentwidth 4
 map global insert <tab> '<a-;><gt>'
 map global insert <s-tab> '<a-;><lt>'
-# Always number lines
-add-highlighter global/ number-lines
-# Always soft-wrap lines
-add-highlighter global/ wrap -word -indent
+
+hook global BufCreate .* %{
+    # Always number lines
+    add-highlighter global/ number-lines
+    # Always soft-wrap lines
+    add-highlighter global/ wrap -word -indent
+}
 
 # enable kak-lsp to do it's work
 #evaluate-commands %sh{kak-lsp --kakoune -s $kak_session}
@@ -23,18 +26,44 @@ map -docstring "start rover" global user r :terminal<space>rover<ret>
 map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
 map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
 
-define-command -docstring "copy main selection to X11 clipboard" xcopy %{
+define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
 }
 
-define-command -docstring "paste X11 clipboard at cursor" xpaste %{
+define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
     exec \i %sh{ xclip -selection clipboard -o } <esc>
+}
+
+define-command -override -docstring "Show flake8 style errors in python" flake8-lint %{
+    declare-option line-specs flake8_errors
+    #set-option window flake8_errors %val{timestamp} '1|Foo' '3|{red,yellow+b}Bar'
+    remove-highlighter window/flake8
+    evaluate-commands %sh{
+        tmpfile=$(mktemp)
+        errors=$(cat "${kak_buffile}" | flake8 - | tee $tmpfile)
+        lines=$(echo "${errors}" | sed -E "s/stdin:([0-9]+):.*/'\1|flake8' /" | tr -d '\n')
+        printf %s\\n "echo -debug setting highlights: set-option window flake8_errors %val{timestamp} ${lines}; set-option window flake8_errors %val{timestamp} ${lines}"
+        if cat $tmpfile | grep "stdin:$kak_cursor_line:" 2>&1 > /dev/null ; then
+            info_box=$(cat $tmpfile | grep "stdin:${kak_cursor_line}:" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/')
+            printf %s\\n "echo -debug info: $info_box"
+            printf %s\\n "$info_box"
+        else
+            printf %s\\n "echo -debug $(echo $errors | tr -d '\n')"
+            printf %s\\n "echo -debug $(echo $errors | grep 'stdin:$kak_cursor_line' | tr -d '\n')"
+            printf %s\\n "echo -debug ${kak_cursor_line}"
+        fi
+
+    }
+    add-highlighter window/flake8 flag-lines red flake8_errors
+    # evaluate-commands %sh{
+    #     cat "${kak_buffile}" | flake8 - | grep ":${kak_cursor_line}:[0-9]+:" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/'
+    # }
 }
 
 # Register custom hooks whenever I open a markdown file.
 # Because the filename filter is a regex, the literal period
 # must be escaped
-hook global BufCreate .*\.md %{
+hook global WinSetOption filetype=markdown %{
     # Print in the debug buffer so that I can tell the hook fired
     echo -debug "Markdown Mode Enabled"
     # Create easy user-mode mapping to format tables
@@ -42,7 +71,23 @@ hook global BufCreate .*\.md %{
     map -docstring "begin live-previewing this document in Firefox" buffer user p :md-preview<ret>
 }
 
-define-command terminal -params .. %{
+hook global WinSetOption filetype=python %{
+    jedi-enable-autocomplete
+    hook buffer NormalIdle .* %{
+        flake8-lint
+    }
+}
+
+hook global WinSetOption filetype=go %{
+    go-enable-autocomplete
+    map window user d :go-doc-info<ret>
+    map window user g :go-jump<ret>
+    hook buffer BufWritePre .* %{
+        go-format
+    }
+}
+
+define-command -override terminal -params .. %{
   evaluate-commands shell \
     -export session \
     -export client \
