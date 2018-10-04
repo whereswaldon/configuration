@@ -36,12 +36,11 @@ define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
 
 define-command -override -docstring "Show flake8 style errors in python" flake8-lint %{
     declare-option line-specs flake8_errors
-    #set-option window flake8_errors %val{timestamp} '1|Foo' '3|{red,yellow+b}Bar'
     remove-highlighter window/flake8
     evaluate-commands %sh{
         tmpfile=$(mktemp)
         errors=$(cat "${kak_buffile}" | flake8 - | tee $tmpfile)
-        lines=$(echo "${errors}" | sed -E "s/stdin:([0-9]+):.*/'\1|flake8' /" | tr -d '\n')
+        lines=$(echo "${errors}" | sed -E "s/.*:([0-9]+):[0-9]+: ([EW])/'\1|\2' /" | tr -d '\n')
         printf %s\\n "echo -debug setting highlights: set-option window flake8_errors %val{timestamp} ${lines}; set-option window flake8_errors %val{timestamp} ${lines}"
         if cat $tmpfile | grep "stdin:$kak_cursor_line:" 2>&1 > /dev/null ; then
             info_box=$(cat $tmpfile | grep "stdin:${kak_cursor_line}:" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/')
@@ -52,12 +51,34 @@ define-command -override -docstring "Show flake8 style errors in python" flake8-
             printf %s\\n "echo -debug $(echo $errors | grep 'stdin:$kak_cursor_line' | tr -d '\n')"
             printf %s\\n "echo -debug ${kak_cursor_line}"
         fi
+        rm "$tmpfile"
 
     }
     add-highlighter window/flake8 flag-lines red flake8_errors
-    # evaluate-commands %sh{
-    #     cat "${kak_buffile}" | flake8 - | grep ":${kak_cursor_line}:[0-9]+:" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/'
-    # }
+}
+
+declare-option -hidden str yapf_tmp_dir
+
+define-command -override -params ..1 yapf-format \
+    -docstring "Format a python buffer with yapf" %{
+    evaluate-commands %sh{
+        dir=$(mktemp -d "${TMPDIR:-/tmp}"/kak-yapf.XXXXXXXX)
+        printf %s\\n "set-option buffer yapf_tmp_dir ${dir}"
+        printf %s\\n "evaluate-commands -no-hooks write ${dir}/buf"
+        printf %s\\n "echo -debug dir=$dir"
+    }
+    evaluate-commands %sh{
+        dir=${kak_opt_yapf_tmp_dir}
+        yapf -i "${dir}/buf" 2> "${dir}/stderr"
+        if [ $? ]; then
+            cp ${dir}/buf "${kak_buffile}"
+        else
+            # we should report error if linting isn't active
+            printf %s\\n "echo -debug '$(cat ${dir}/stderr)'"
+        fi
+        rm -r ${dir}
+    }
+    edit!
 }
 
 # Register custom hooks whenever I open a markdown file.
@@ -74,7 +95,10 @@ hook global WinSetOption filetype=markdown %{
 hook global WinSetOption filetype=python %{
     jedi-enable-autocomplete
     hook buffer NormalIdle .* %{
-        flake8-lint
+#        flake8-lint
+    }
+    hook buffer BufWritePre .* %{
+        yapf-format
     }
 }
 
