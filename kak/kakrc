@@ -34,25 +34,30 @@ define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
     exec \i %sh{ xclip -selection clipboard -o } <esc>
 }
 
+declare-option -hidden line-specs flake8_errors
+declare-option -hidden str flake8_tmp_dir
+
 define-command -override -docstring "Show flake8 style errors in python" flake8-lint %{
-    declare-option line-specs flake8_errors
     remove-highlighter window/flake8
     evaluate-commands %sh{
-        tmpfile=$(mktemp)
-        errors=$(cat "${kak_buffile}" | flake8 - | tee $tmpfile)
-        lines=$(echo "${errors}" | sed -E "s/.*:([0-9]+):[0-9]+: ([EW])/'\1|\2' /" | tr -d '\n')
-        printf %s\\n "echo -debug setting highlights: set-option window flake8_errors %val{timestamp} ${lines}; set-option window flake8_errors %val{timestamp} ${lines}"
-        if cat $tmpfile | grep "stdin:$kak_cursor_line:" 2>&1 > /dev/null ; then
-            info_box=$(cat $tmpfile | grep "stdin:${kak_cursor_line}:" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/')
-            printf %s\\n "echo -debug info: $info_box"
-            printf %s\\n "$info_box"
+        dir=$(mktemp -d "${TMPDIR:-/tmp}"/kak-flake8.XXXXXXXX)
+        printf %s\\n "set-option buffer flake8_tmp_dir ${dir}"
+        printf %s\\n "evaluate-commands -no-hooks write ${dir}/buf"
+    }
+    evaluate-commands %sh{
+        dir=${kak_opt_flake8_tmp_dir}
+        flake8 - <"${dir}/buf" > "${dir}/stdout" 2> "${dir}/stderr"
+        if [ $? ] ; then
+            lines=$(cat "${dir}/stdout" | sed -E "s/.*:([0-9]+):[0-9]+: ([EW]).*/'\1|\2' /" | tr -d '\n')
+            printf %s\\n "set-option window flake8_errors %val{timestamp} ${lines}"
+            if grep "stdin:$kak_cursor_line:" "${dir}/stdout" 2>&1 > /dev/null ; then
+                info_box=$(grep "stdin:${kak_cursor_line}:" "${dir}/stdout" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/')
+                printf %s\\n "$info_box"
+            fi
         else
-            printf %s\\n "echo -debug $(echo $errors | tr -d '\n')"
-            printf %s\\n "echo -debug $(echo $errors | grep 'stdin:$kak_cursor_line' | tr -d '\n')"
-            printf %s\\n "echo -debug ${kak_cursor_line}"
+            printf %s\\n "echo -debug Error running flake8: $(cat ${dir}/stderr)"
         fi
-        rm "$tmpfile"
-
+        rm -r "${dir}"
     }
     add-highlighter window/flake8 flag-lines red flake8_errors
 }
@@ -95,7 +100,7 @@ hook global WinSetOption filetype=markdown %{
 hook global WinSetOption filetype=python %{
     jedi-enable-autocomplete
     hook buffer NormalIdle .* %{
-#        flake8-lint
+        flake8-lint
     }
     hook buffer BufWritePre .* %{
         yapf-format
