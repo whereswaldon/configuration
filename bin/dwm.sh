@@ -18,7 +18,7 @@ fi
 
 feh --bg-scale --random "$HOME/Pictures/Wallpaper/"
 
-for daemon in slstatus compton sxhkd redshift reconfigure-monitors ; do
+for daemon in slstatus compton sxhkd redshift reconfigure-monitors sas-vpn ; do
     if ! pgrep "$daemon" > /dev/null 2>&1; then
     	$daemon > "/tmp/$daemon.log" 2>&1 &
     fi
