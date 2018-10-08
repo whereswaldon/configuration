@@ -1,0 +1,2 @@
+#!/bin/sh
+st -e vpn-connect.sh
