@@ -1,0 +1,2 @@
+#!/bin/sh
+udevadm monitor -k -s drm | grep --line-buffered  drm | xargs -n1 -I0 dwm.sh
