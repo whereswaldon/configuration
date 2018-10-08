@@ -108,11 +108,14 @@ hook global WinSetOption filetype=python %{
 }
 
 hook global WinSetOption filetype=go %{
+    set window lintcmd gometalinter
+    lint-enable
     go-enable-autocomplete
     map window user d :go-doc-info<ret>
     map window user g :go-jump<ret>
     hook buffer BufWritePre .* %{
         go-format
+        lint
     }
 }
 
