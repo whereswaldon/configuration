@@ -26,6 +26,7 @@ symlink "$HOME/.config/kak" "$BASEDIR/kak"
 symlink "$HOME/.config/sxhkd" "$BASEDIR/sxhkd"
 symlink "$HOME/.local/bin/penv" "$BASEDIR/bin/penv"
 symlink "$HOME/.local/bin/dwm.sh" "$BASEDIR/bin/dwm.sh"
+symlink "$HOME/.local/bin/get-layout" "$BASEDIR/bin/get-layout"
 
 # special case
 if [ -e "$BASEDIR/kak/autoload/system" ] ; then rm -v "$BASEDIR/kak/autoload/system" ; fi
