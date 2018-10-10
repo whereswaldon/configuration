@@ -107,6 +107,28 @@ hook global WinSetOption filetype=python %{
     }
 }
 
+declare-option -hidden str go_imports_tmp_dir
+
+define-command go-imports -docstring "rewrite imports at top of go files" %{
+    evaluate-commands %sh{
+        dir=$(mktemp -d "${TMPDIR:-/tmp}"/kak-go.XXXXXXXX)
+        printf %s\\n "set-option buffer go_imports_tmp_dir ${dir}"
+        printf %s\\n "evaluate-commands -no-hooks write ${dir}/buf"
+    }
+    evaluate-commands %sh{
+        dir=${kak_opt_go_imports_tmp_dir}
+        eval "goimports -w ${dir}/buf 2> ${dir}/stderr"
+        if [ $? ]; then
+            cp ${dir}/buf "${kak_buffile}"
+        else
+            # we should report error if linting isn't active
+            printf %s\\n "echo -debug '$(cat ${dir}/stderr)'"
+        fi
+        rm -r ${dir}
+    }
+    edit!
+}
+
 hook global WinSetOption filetype=go %{
     set window lintcmd gometalinter
     lint-enable
@@ -114,6 +136,7 @@ hook global WinSetOption filetype=go %{
     map window user d :go-doc-info<ret>
     map window user g :go-jump<ret>
     hook buffer BufWritePre .* %{
+        go-imports
         go-format
         lint
     }
