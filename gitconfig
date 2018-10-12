@@ -3,3 +3,5 @@
 # Please adapt and uncomment the following lines:
 	name = Chris Waldon
 	email = Chris.Waldon@ibm.com
+[hub]
+	host = github.ibm.com
