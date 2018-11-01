@@ -16,10 +16,20 @@ export PATH="$PATH:$GOPATH/bin"
 export EDITOR="$(which kak)"
 export XML_CATALOG_FILES=/usr/local/etc/xml/catalog
 
+export XDG_CONFIG_HOME="$HOME/.config"
+
+# Make gpg XDG compliant
+export GNUPGHOME="$XDG_CONFIG_HOME/gnupg"
+
+# Make pass XDG compilant
+export PASSWORD_STORE_DIR="$XDG_CONFIG_HOME/pass"
+
 # Pick up tweaks specific to this host, if any
 if [ -f "$HOME/.config/tweak-env" ]; then
     . "$HOME/.config/tweak-env"
 fi
+
+[[ $- != *i* ]] && return
 
 default_tmux="base"
 if [ -z "$TMUX" ] ; then
