@@ -34,7 +34,7 @@ fi
 default_tmux="base"
 if [ -z "$TMUX" ] ; then
     # launch tmux if it isn't running
-    if tmux ls | grep $default_tmux ; then
+    if tmux ls |& grep $default_tmux 2>&1 >/dev/null ; then
         # attach to default session if it exists
         tmux attach -t $default_tmux
     else
