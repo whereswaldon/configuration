@@ -19,7 +19,7 @@ export XML_CATALOG_FILES=/usr/local/etc/xml/catalog
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Make gpg XDG compliant
-export GNUPGHOME="$XDG_CONFIG_HOME/gnupg"
+#export GNUPGHOME="$XDG_CONFIG_HOME/gnupg"
 
 # Make pass XDG compilant
 export PASSWORD_STORE_DIR="$XDG_CONFIG_HOME/pass"
@@ -41,3 +41,5 @@ if [ -z "$TMUX" ] ; then
         tmux new-session -t $default_tmux
     fi
 fi
+
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
