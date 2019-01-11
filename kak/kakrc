@@ -25,6 +25,7 @@ map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<re
 map -docstring "start rover" global user r :terminal<space>rover<ret>
 map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
 map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
+map -docstring "enter fzf mode" global user f ': fzf-mode<ret>'
 
 define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
@@ -129,3 +130,12 @@ define-command -override terminal -params .. %{
         echo $cmd
     }
 }
+
+# configure fzf plugin
+source "~/.config/kak/plugins/fzf.kak/rc/fzf.kak" # loading base fzf module
+source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-file.kak"   # fzf file chooser
+source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-buffer.kak" # switching buffers with fzf
+source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-search.kak" # search within file contents
+source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-cd.kak"     # change server's working directory
+source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-ctags.kak"  # search for tag in your project ctags file
+
