@@ -6,6 +6,7 @@ set-option global tabstop 4
 set-option global indentwidth 4
 map global insert <tab> '<a-;><gt>'
 map global insert <s-tab> '<a-;><lt>'
+map -docstring "Interpret file as ledger file" global user l ':set window filetype ledger<ret>'
 
 hook global BufCreate .* %{
     # Always number lines
