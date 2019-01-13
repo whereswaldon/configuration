@@ -1,0 +1,1 @@
+../plugins/shellcheck.kak/shellcheck.kak
