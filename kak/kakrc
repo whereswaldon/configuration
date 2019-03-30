@@ -1,24 +1,42 @@
 # Enable favorite colors
 colorscheme desertex
 
+# configure plug.kak
+source "%val{config}/plugins/plug.kak/rc/plug.kak"
+
+plug "andreyorst/plug.kak" branch "dev" noload
+plug "ul/kak-lsp" do %{
+    cargo build --release --locked
+    cargo install --force --path .
+}
+plug "andreyorst/fzf.kak"
+plug "whereswaldon/kakdown"
+plug "whereswaldon/ledger.kak"
+plug "whereswaldon/shellcheck.kak"
+plug "whereswaldon/myrddin-kak"
+plug "occivink/kakoune-gdb"
+
+
 set-option global aligntab false
 set-option global tabstop 4
 set-option global indentwidth 4
-map global insert <tab> '<a-;><gt>'
-map global insert <s-tab> '<a-;><lt>'
+set-option global scrolloff 999,4
 map -docstring "Interpret file as ledger file" global user l ':set window filetype ledger<ret>'
 
-hook global BufCreate .* %{
+# implement tab using a hook
+hook global InsertChar \t %{ try %{
+      execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
+}}
+
+hook global WinCreate .* %{
     # Always number lines
-    add-highlighter global/ number-lines
+    add-highlighter window/ number-lines
     # Always soft-wrap lines
-    add-highlighter global/ wrap -word -indent
+    add-highlighter window/ wrap -word -indent
 }
 
 # enable kak-lsp to do it's work
-#evaluate-commands %sh{kak-lsp --kakoune -s $kak_session}
-
-#lsp-auto-hover-enable
+lsp-enable
 
 # Easy way to open/edit config
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
@@ -27,6 +45,7 @@ map -docstring "start rover" global user r :terminal<space>rover<ret>
 map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
 map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
 map -docstring "enter fzf mode" global user f ': fzf-mode<ret>'
+map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
 
 define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
@@ -36,61 +55,7 @@ define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
     exec \i %sh{ xclip -selection clipboard -o } <esc>
 }
 
-declare-option -hidden line-specs flake8_errors
-declare-option -hidden str flake8_tmp_dir
-
-define-command -override -docstring "Show flake8 style errors in python" flake8-lint %{
-    remove-highlighter window/flake8
-    evaluate-commands %sh{
-        dir=$(mktemp -d "${TMPDIR:-/tmp}"/kak-flake8.XXXXXXXX)
-        printf %s\\n "set-option buffer flake8_tmp_dir ${dir}"
-        printf %s\\n "evaluate-commands -no-hooks write ${dir}/buf"
-    }
-    evaluate-commands %sh{
-        dir=${kak_opt_flake8_tmp_dir}
-        flake8 - <"${dir}/buf" > "${dir}/stdout" 2> "${dir}/stderr"
-        if [ $? ] ; then
-            lines=$(cat "${dir}/stdout" | sed -E "s/.*:([0-9]+):[0-9]+: ([EW]).*/'\1|\2' /" | tr -d '\n')
-            printf %s\\n "set-option window flake8_errors %val{timestamp} ${lines}"
-            if grep "stdin:$kak_cursor_line:" "${dir}/stdout" 2>&1 > /dev/null ; then
-                info_box=$(grep "stdin:${kak_cursor_line}:" "${dir}/stdout" | sed -E 's/.*:([0-9]+):([0-9]+): ([EW][0-9]+) (.*)/info -anchor \1.1 -title "\3 (column \2)" "\4";/')
-                printf %s\\n "$info_box"
-            fi
-        else
-            printf %s\\n "echo -debug Error running flake8: $(cat ${dir}/stderr)"
-        fi
-        rm -r "${dir}"
-    }
-    add-highlighter window/flake8 flag-lines red flake8_errors
-}
-
-declare-option -hidden str yapf_tmp_dir
-
-define-command -override -params ..1 yapf-format \
-    -docstring "Format a python buffer with yapf" %{
-    evaluate-commands %sh{
-        dir=$(mktemp -d "${TMPDIR:-/tmp}"/kak-yapf.XXXXXXXX)
-        printf %s\\n "set-option buffer yapf_tmp_dir ${dir}"
-        printf %s\\n "evaluate-commands -no-hooks write ${dir}/buf"
-        printf %s\\n "echo -debug dir=$dir"
-    }
-    evaluate-commands %sh{
-        dir=${kak_opt_yapf_tmp_dir}
-        yapf -i "${dir}/buf" 2> "${dir}/stderr"
-        if [ $? ]; then
-            cp ${dir}/buf "${kak_buffile}"
-        else
-            # we should report error if linting isn't active
-            printf %s\\n "echo -debug '$(cat ${dir}/stderr)'"
-        fi
-        rm -r ${dir}
-    }
-    edit!
-}
-
 # Register custom hooks whenever I open a markdown file.
-# Because the filename filter is a regex, the literal period
-# must be escaped
 hook global WinSetOption filetype=markdown %{
     # Print in the debug buffer so that I can tell the hook fired
     echo -debug "Markdown Mode Enabled"
@@ -101,12 +66,6 @@ hook global WinSetOption filetype=markdown %{
 
 hook global WinSetOption filetype=python %{
     jedi-enable-autocomplete
-    hook buffer NormalIdle .* %{
-        flake8-lint
-    }
-    hook buffer BufWritePre .* %{
-        yapf-format
-    }
 }
 
 hook global WinSetOption filetype=go %{
@@ -121,22 +80,13 @@ hook global WinSetOption filetype=go %{
     }
 }
 
-define-command -override terminal -params .. %{
-  evaluate-commands shell \
-    -export session \
-    -export client \
-    %sh{
-    	cmd="tmux split-window -h -b -l20 env KAK_SESSION=${kak_session} KAK_CLIENT=${kak_client} EDITOR=kak-connect %arg(@) "
-        test $# = 0 && cmd="$cmd $SHELL"
-        echo $cmd
-    }
-}
-
-# configure fzf plugin
-source "~/.config/kak/plugins/fzf.kak/rc/fzf.kak" # loading base fzf module
-source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-file.kak"   # fzf file chooser
-source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-buffer.kak" # switching buffers with fzf
-source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-search.kak" # search within file contents
-source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-cd.kak"     # change server's working directory
-source "~/.config/kak/plugins/fzf.kak/rc/fzf-modules/fzf-ctags.kak"  # search for tag in your project ctags file
-
+# define-command -override terminal -params .. %{
+#   evaluate-commands shell \
+#     -export session \
+#     -export client \
+#     %sh{
+#     	cmd="tmux split-window -h -b -l20 env KAK_SESSION=${kak_session} KAK_CLIENT=${kak_client} EDITOR=kak-connect %arg(@) "
+#         test $# = 0 && cmd="$cmd $SHELL"
+#         echo $cmd
+#     }
+# }

@@ -1,1 +1,0 @@
-./../plugins/shell.kak/rc/shell.kak
