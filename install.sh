@@ -1,6 +1,6 @@
 #!/bin/bash
 set -x
-BASEDIR="$(dirname $0)"
+BASEDIR="$(dirname "$0")"
 
 function symlink {
     # symlink ensures that there is a link at $target that points to $source.
@@ -8,11 +8,11 @@ function symlink {
     local source="$2"
 
     # back up the file if it isn't already a symlink
-    if [ ! -L "$target" -a -e "$target" ] ; then
+    if [ ! -L "$target" ] && [ -e "$target" ] ; then
         mv -v "$target" "$target-waldon-backup";
     fi
     # overwrite symlink
-    ln -svTnf "$(realpath $source)" "$target"
+    ln -svTnf "$(realpath "$source")" "$target"
 }
 
 symlink "$HOME/.bash_profile" "$BASEDIR/bash_profile"
@@ -29,8 +29,11 @@ symlink "$HOME/.local/bin/dwm.sh" "$BASEDIR/bin/dwm.sh"
 symlink "$HOME/.local/bin/get-layout" "$BASEDIR/bin/get-layout"
 symlink "$HOME/.local/bin/reconfigure-monitors" "$BASEDIR/bin/reconfigure-monitors"
 symlink "$HOME/.local/bin/sas-vpn" "$BASEDIR/bin/sas-vpn"
-symlink "$HOME/.local/bin/kak-connect" "$BASEDIR/kak/plugins/kak-connect/bin/kak-connect"
 
-# special case
-if [ -e "$BASEDIR/kak/autoload/system" ] ; then rm -v "$BASEDIR/kak/autoload/system" ; fi
-symlink "$BASEDIR/kak/autoload/system" "$(dirname $(which kak))/../share/kak/autoload"
+# ensure plug.kak exists
+PLUG_KAK_PATH="$BASEDIR/kak/plugins/plug.kak"
+PLUG_KAK_URL="https://github.com/andreyorst/plug.kak"
+PLUG_KAK_BRANCH="dev"
+if ! [ -e "$PLUG_KAK_PATH" ] ; then
+    git clone "$PLUG_KAK_URL" --branch "$PLUG_KAK_BRANCH" "$PLUG_KAK_PATH"
+fi
