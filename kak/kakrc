@@ -37,6 +37,8 @@ hook global WinCreate .* %{
 
 # enable kak-lsp to do it's work
 lsp-enable
+lsp-auto-hover-enable
+lsp-auto-signature-help-enable
 
 # Easy way to open/edit config
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
