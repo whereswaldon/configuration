@@ -21,7 +21,7 @@ set-option global aligntab false
 set-option global tabstop 4
 set-option global indentwidth 4
 set-option global scrolloff 999,4
-map -docstring "Interpret file as ledger file" global user l ':set window filetype ledger<ret>'
+map -docstring "Interpret file as ledger file" global user L ':set window filetype ledger<ret>'
 
 # implement tab using a hook
 hook global InsertChar \t %{ try %{
@@ -43,11 +43,15 @@ lsp-auto-signature-help-enable
 # Easy way to open/edit config
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
 map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
-map -docstring "start rover" global user r :terminal<space>rover<ret>
 map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
 map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
 map -docstring "enter fzf mode" global user f ': fzf-mode<ret>'
 map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
+
+map -docstring "highlight references" global user h ':lsp-highlight-references<ret>'
+map -docstring "list references" global user r ':lsp-references<ret>'
+map -docstring "next reference" global user n ':lsp-references-next-match<ret>'
+map -docstring "prev reference" global user p ':lsp-reference-previous-match<ret>'
 
 define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
@@ -71,9 +75,9 @@ hook global WinSetOption filetype=python %{
 }
 
 hook global WinSetOption filetype=go %{
-    set window lintcmd gometalinter
+    set window lintcmd 'golangci-lint run'
     lint-enable
-    go-enable-autocomplete
+   # go-enable-autocomplete
     map window user d :go-doc-info<ret>
     map window user g :go-jump<ret>
     hook buffer BufWritePre .* %{
