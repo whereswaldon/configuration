@@ -6,21 +6,27 @@ source "%val{config}/plugins/plug.kak/rc/plug.kak"
 
 plug "andreyorst/plug.kak" branch "dev" noload
 plug "ul/kak-lsp" do %{
-    cargo build --release --locked
-    cargo install --force --path .
+    cargo install --locked --force --path .
+    echo DONE
+}
+plug "golang/tools" noload do %{
+    env --chdir=$HOME GO111MODULE=on go get -v golang.org/x/tools/gopls@latest
+    echo DONE
 }
 plug "andreyorst/fzf.kak"
 plug "whereswaldon/kakdown"
-plug "whereswaldon/ledger.kak"
 plug "whereswaldon/shellcheck.kak"
 plug "whereswaldon/myrddin-kak"
 plug "occivink/kakoune-gdb"
-
+plug "occivink/kakoune-sudo-write"
 
 set-option global aligntab false
 set-option global tabstop 4
 set-option global indentwidth 4
-set-option global scrolloff 999,4
+set-option global scrolloff 15,4
+set-option global ui_options ncurses_set_title=false
+require-module fzf
+set-option global fzf_highlight_command "bat"
 map -docstring "Interpret file as ledger file" global user L ':set window filetype ledger<ret>'
 
 # implement tab using a hook
@@ -35,11 +41,6 @@ hook global WinCreate .* %{
     add-highlighter window/ wrap -word -indent
 }
 
-# enable kak-lsp to do it's work
-lsp-enable
-lsp-auto-hover-enable
-lsp-auto-signature-help-enable
-
 # Easy way to open/edit config
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
 map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
@@ -49,7 +50,7 @@ map -docstring "enter fzf mode" global user f ': fzf-mode<ret>'
 map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
 
 map -docstring "highlight references" global user h ':lsp-highlight-references<ret>'
-map -docstring "list references" global user r ':lsp-references<ret>'
+map -docstring "rename symbol" global user r ':lsp-rename-prompt<ret>'
 map -docstring "next reference" global user n ':lsp-references-next-match<ret>'
 map -docstring "prev reference" global user p ':lsp-reference-previous-match<ret>'
 
@@ -70,29 +71,14 @@ hook global WinSetOption filetype=markdown %{
     map -docstring "begin live-previewing this document in Firefox" buffer user p :md-preview<ret>
 }
 
-hook global WinSetOption filetype=python %{
-    jedi-enable-autocomplete
-}
-
 hook global WinSetOption filetype=go %{
     set window lintcmd 'golangci-lint run'
     lint-enable
-   # go-enable-autocomplete
-    map window user d :go-doc-info<ret>
-    map window user g :go-jump<ret>
-    hook buffer BufWritePre .* %{
+    lsp-enable-window
+    lsp-auto-hover-enable
+    lsp-auto-signature-help-enable
+    hook -group gofmt buffer BufWritePre .* %{
         go-format -use-goimports
         lint
     }
 }
-
-# define-command -override terminal -params .. %{
-#   evaluate-commands shell \
-#     -export session \
-#     -export client \
-#     %sh{
-#     	cmd="tmux split-window -h -b -l20 env KAK_SESSION=${kak_session} KAK_CLIENT=${kak_client} EDITOR=kak-connect %arg(@) "
-#         test $# = 0 && cmd="$cmd $SHELL"
-#         echo $cmd
-#     }
-# }

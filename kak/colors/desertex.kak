@@ -47,7 +47,7 @@ face global LineNumbersWrapped      rgb:605958
 # text + background
 face global MenuBackground black,rgb:c2bfa5+b
 # selected entry in the menu (use 302028 when true color support is fixed)
-face global MenuForeground rgb:f0a0c0,magenta
+face global MenuForeground black,magenta
 
 # completion menu info
 face global MenuInfo white,rgb:445599
