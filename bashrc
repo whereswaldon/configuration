@@ -44,10 +44,6 @@ pathprepend "$HOME/.local/bin"
 pathappend "$HOME/.nix_profile/bin"
 pathappend "$GOPATH/bin"
 
-if [ -d /usr/lib/go-1.11/bin ] ; then
-    pathappend /usr/lib/go-1.11/bin
-fi
-
 export EDITOR="$(which kak)"
 export XML_CATALOG_FILES=/usr/local/etc/xml/catalog
 
@@ -57,12 +53,16 @@ export XDG_CONFIG_HOME="$HOME/.config"
 #export GNUPGHOME="$XDG_CONFIG_HOME/gnupg"
 
 # Make pass XDG compilant
-export PASSWORD_STORE_DIR="$XDG_CONFIG_HOME/pass"
+#export PASSWORD_STORE_DIR="$XDG_CONFIG_HOME/pass"
 
 # Pick up tweaks specific to this host, if any
 if [ -f "$HOME/.config/tweak-env" ]; then
     . "$HOME/.config/tweak-env"
 fi
+
+export PATH="$HOME/.cargo/bin:$PATH"
+
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
 [[ $- != *i* ]] && return
 
@@ -77,4 +77,3 @@ if [ -z "$TMUX" ] ; then
     fi
 fi
 
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
