@@ -1,3 +1,0 @@
-#!/bin/sh 
-# deterministically create a name for this set of connected outputs
-printf %s.sh\\n $(xrandr | grep ' connected' | sed -E 's/(.*) connected.*/\1/' | sort | tr -d ' \n')
