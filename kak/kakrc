@@ -5,7 +5,7 @@ colorscheme desertex
 source "%val{config}/plugins/plug.kak/rc/plug.kak"
 
 plug "andreyorst/plug.kak" branch "dev" noload
-plug "ul/kak-lsp" do %{
+plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
     echo DONE
 }
@@ -25,6 +25,7 @@ set-option global tabstop 4
 set-option global indentwidth 4
 set-option global scrolloff 15,4
 set-option global ui_options ncurses_set_title=false
+set-option global lsp_hover_anchor true
 require-module fzf
 set-option global fzf_highlight_command "bat"
 map -docstring "Interpret file as ledger file" global user L ':set window filetype ledger<ret>'
@@ -53,6 +54,7 @@ map -docstring "highlight references" global user h ':lsp-highlight-references<r
 map -docstring "rename symbol" global user r ':lsp-rename-prompt<ret>'
 map -docstring "next reference" global user n ':lsp-references-next-match<ret>'
 map -docstring "prev reference" global user p ':lsp-reference-previous-match<ret>'
+map -docstring "lsp mode" global user l ':enter-user-mode lsp<ret>'
 
 define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
@@ -72,13 +74,11 @@ hook global WinSetOption filetype=markdown %{
 }
 
 hook global WinSetOption filetype=go %{
-    set window lintcmd 'golangci-lint run'
-    lint-enable
     lsp-enable-window
     lsp-auto-hover-enable
     lsp-auto-signature-help-enable
+    remove-hooks window go-insert
     hook -group gofmt buffer BufWritePre .* %{
-        go-format -use-goimports
-        lint
+        lsp-formatting-sync
     }
 }
