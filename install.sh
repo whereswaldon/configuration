@@ -18,17 +18,9 @@ function symlink {
 symlink "$HOME/.bash_profile" "$BASEDIR/bash_profile"
 symlink "$HOME/.bashrc" "$BASEDIR/bashrc"
 symlink "$HOME/.tmux.conf" "$BASEDIR/tmux.conf"
-symlink "$HOME/.tmate.conf" "$BASEDIR/tmate.conf"
 symlink "$HOME/.gitconfig" "$BASEDIR/gitconfig"
-symlink "$HOME/.dwm" "$BASEDIR/dwm"
-symlink "$HOME/.st" "$BASEDIR/st"
 symlink "$HOME/.config/kak" "$BASEDIR/kak"
-symlink "$HOME/.config/sxhkd" "$BASEDIR/sxhkd"
 symlink "$HOME/.local/bin/penv" "$BASEDIR/bin/penv"
-symlink "$HOME/.local/bin/dwm.sh" "$BASEDIR/bin/dwm.sh"
-symlink "$HOME/.local/bin/get-layout" "$BASEDIR/bin/get-layout"
-symlink "$HOME/.local/bin/reconfigure-monitors" "$BASEDIR/bin/reconfigure-monitors"
-symlink "$HOME/.local/bin/sas-vpn" "$BASEDIR/bin/sas-vpn"
 
 # ensure plug.kak exists
 PLUG_KAK_PATH="$BASEDIR/kak/plugins/plug.kak"
