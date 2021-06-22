@@ -4,7 +4,7 @@ colorscheme desertex
 # configure plug.kak
 source "%val{config}/plugins/plug.kak/rc/plug.kak"
 
-plug "andreyorst/plug.kak" branch "dev" noload
+plug "andreyorst/plug.kak" noload
 plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
     echo DONE
@@ -23,9 +23,13 @@ plug "occivink/kakoune-sudo-write"
 set-option global aligntab false
 set-option global tabstop 4
 set-option global indentwidth 4
-set-option global scrolloff 15,4
+set-option global scrolloff 4,4
 set-option global ui_options ncurses_set_title=false
 set-option global lsp_hover_anchor true
+set-option global lsp_hover_max_lines 15
+set-option global lsp_auto_highlight_references true
+set-option global grepcmd 'rg -SHn'
+
 require-module fzf
 set-option global fzf_highlight_command "bat"
 map -docstring "Interpret file as ledger file" global user L ':set window filetype ledger<ret>'
@@ -78,7 +82,16 @@ hook global WinSetOption filetype=go %{
     lsp-auto-hover-enable
     lsp-auto-signature-help-enable
     remove-hooks window go-insert
-    hook -group gofmt buffer BufWritePre .* %{
+    hook -group goimports buffer BufWritePre .* %{
+        lsp-formatting-sync
+    }
+}
+
+hook global WinSetOption filetype=c %{
+    lsp-enable-window
+    lsp-auto-hover-enable
+    lsp-auto-signature-help-enable
+    hook -group cfmt buffer BufWritePre .* %{
         lsp-formatting-sync
     }
 }
