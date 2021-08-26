@@ -8,6 +8,26 @@ plug "andreyorst/plug.kak" noload
 plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
     echo DONE
+} config %{
+    define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
+    set-option global lsp_hover_anchor true
+    set-option global lsp_hover_max_lines 15
+    set-option global lsp_auto_highlight_references true
+    define-command -override -hidden lsp-show-code-actions -params .. %{
+	    evaluate-commands %sh{
+	        while [ $# -gt 0 ]; do
+	            title=$1
+	            command=$2
+	            shift
+	            shift
+
+	            if [ "$title" = "Organize Imports" ]; then
+	                printf %s\\n "$command"
+	                exit
+	            fi
+	        done
+	    }
+	}
 }
 plug "golang/tools" noload do %{
     env --chdir=$HOME GO111MODULE=on go get -v golang.org/x/tools/gopls@latest
@@ -25,9 +45,7 @@ set-option global tabstop 4
 set-option global indentwidth 4
 set-option global scrolloff 4,4
 set-option global ui_options ncurses_set_title=false
-set-option global lsp_hover_anchor true
-set-option global lsp_hover_max_lines 15
-set-option global lsp_auto_highlight_references true
+set-option global ui_options terminal_set_title=false
 set-option global grepcmd 'rg -SHn'
 
 require-module fzf
@@ -56,9 +74,8 @@ map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
 
 map -docstring "highlight references" global user h ':lsp-highlight-references<ret>'
 map -docstring "rename symbol" global user r ':lsp-rename-prompt<ret>'
-map -docstring "next reference" global user n ':lsp-references-next-match<ret>'
-map -docstring "prev reference" global user p ':lsp-reference-previous-match<ret>'
 map -docstring "lsp mode" global user l ':enter-user-mode lsp<ret>'
+map -docstring "next patch comment" global user n '/^> [^>]<ret>'
 
 define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
     nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
@@ -77,12 +94,15 @@ hook global WinSetOption filetype=markdown %{
     map -docstring "begin live-previewing this document in Firefox" buffer user p :md-preview<ret>
 }
 
+set-option -add global lsp_server_initialization_options gopls.setup.gofumpt="true"
+
 hook global WinSetOption filetype=go %{
     lsp-enable-window
     lsp-auto-hover-enable
     lsp-auto-signature-help-enable
     remove-hooks window go-insert
     hook -group goimports buffer BufWritePre .* %{
+        lsp-code-actions
         lsp-formatting-sync
     }
 }
