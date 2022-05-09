@@ -1,0 +1,125 @@
+# Enable favorite colors
+colorscheme desertex
+
+# configure plug.kak
+source "%val{config}/plugins/plug.kak/rc/plug.kak"
+plug "andreyorst/plug.kak" noload
+plug "kak-lsp/kak-lsp" do %{
+    cargo install --locked --force --path .
+    echo DONE
+} config %{
+    define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
+    set-option global lsp_hover_anchor true
+    set-option global lsp_hover_max_lines 15
+    set-option global lsp_auto_highlight_references true
+    define-command -override -hidden lsp-show-code-actions -params .. %{
+	    evaluate-commands %sh{
+	        while [ $# -gt 0 ]; do
+	            title=$1
+	            command=$2
+	            shift
+	            shift
+
+	            if [ "$title" = "Organize Imports" ]; then
+	                printf %s\\n "$command"
+	                exit
+	            fi
+	        done
+	    }
+	}
+}
+plug "golang/tools" noload do %{
+    go install -v golang.org/x/tools/gopls@latest
+    echo DONE
+}
+plug "andreyorst/fzf.kak"
+plug "whereswaldon/kakdown"
+plug "whereswaldon/shellcheck.kak"
+plug "whereswaldon/myrddin-kak"
+plug "occivink/kakoune-gdb"
+plug "occivink/kakoune-sudo-write"
+
+set-option global aligntab false
+set-option global tabstop 4
+set-option global indentwidth 4
+set-option global scrolloff 4,4
+set-option global ui_options ncurses_set_title=false
+set-option global ui_options terminal_set_title=false
+set-option global grepcmd 'rg -SHn'
+
+require-module fzf
+set-option global fzf_highlight_command "bat"
+map -docstring "Interpret file as ledger file" global user L ':set window filetype ledger<ret>'
+
+# implement tab using a hook
+hook global InsertChar \t %{ try %{
+      execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
+}}
+
+hook global WinCreate .* %{
+    # Always number lines
+    add-highlighter window/ number-lines
+    # Always soft-wrap lines
+    add-highlighter window/ wrap -word -indent
+}
+
+# Easy way to open/edit config
+map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
+map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
+map -docstring "copy to X11 clipboard" global user c :xcopy<ret>
+map -docstring "paste from X11 clipboard" global user v :xpaste<ret>
+map -docstring "enter fzf mode" global user f ': fzf-mode<ret>'
+map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
+
+map -docstring "highlight references" global user h ':lsp-highlight-references<ret>'
+map -docstring "rename symbol" global user r ':lsp-rename-prompt<ret>'
+map -docstring "lsp mode" global user l ':enter-user-mode lsp<ret>'
+map -docstring "next patch comment" global user n '/^> [^>]<ret>'
+
+# Restore easy line selection.
+map -docstring "buffer top" global goto G g
+map -docstring "buffer top" global goto K k
+map -docstring "line end" global goto L l
+map -docstring "line begin" global goto H h
+map -docstring "line non-blank start" global goto I i
+map -docstring "buffer bottom" global goto J j
+map -docstring "buffer end" global goto E e
+
+define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
+    nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
+}
+
+define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
+    exec \i %sh{ xclip -selection clipboard -o } <esc>
+}
+
+# Register custom hooks whenever I open a markdown file.
+hook global WinSetOption filetype=markdown %{
+    # Print in the debug buffer so that I can tell the hook fired
+    echo -debug "Markdown Mode Enabled"
+    # Create easy user-mode mapping to format tables
+    map -docstring "format markdown table under cursor" buffer user t :md-format-table<ret>
+    map -docstring "begin live-previewing this document in Firefox" buffer user p :md-preview<ret>
+}
+
+set-option -add global lsp_server_initialization_options setup.gofumpt="true"
+
+hook global WinSetOption filetype=go %{
+    lsp-enable-window
+    lsp-auto-hover-enable
+    lsp-auto-signature-help-enable
+    set-option window formatcmd 'gofmt -s'
+    remove-hooks window go-insert
+    hook -group goimports buffer BufWritePre .* %{
+        format-buffer
+    }
+}
+
+hook global WinSetOption filetype=c %{
+    lsp-enable-window
+    lsp-auto-hover-enable
+    lsp-auto-signature-help-enable
+    hook -group cfmt buffer BufWritePre .* %{
+        lsp-formatting-sync
+    }
+}
