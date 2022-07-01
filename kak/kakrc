@@ -1,4 +1,4 @@
-colorscheme monochrome
+colorscheme desertex
 # Configure plug.kak
 source "%val{config}/plugins/plug.kak/rc/plug.kak"
 
@@ -6,6 +6,8 @@ source "%val{config}/plugins/plug.kak/rc/plug.kak"
 plug "andreyorst/plug.kak" noload
 
 plug "whereswaldon/shellcheck.kak"
+
+plug "andreyorst/fzf.kak"
 
 # Use plug.kak to manage installed version of kak-lsp.
 # note that this requires a modern rust toolchain on the
@@ -31,6 +33,33 @@ plug "kak-lsp/kak-lsp" do %{
     # This highlights references to the variable under the cursor wherever
     # they appear. You may or may not find this useful.
     set-option global lsp_auto_highlight_references true
+    # Easy keybinding for renaming symbols.
+    map -docstring "rename symbol" global user r ' :lsp-rename-prompt<ret>'
+
+    # Easy keybinding to access LSP functionality.
+    map -docstring "lsp mode" global user l ' :enter-user-mode lsp<ret>'
+
+    # Show hover information in a buffer in the docs client.
+    lsp-auto-hover-enable %opt{docsclient}
+
+    # When kakoune concludes that a file is go, do the following.
+    hook global WinSetOption filetype=go %{
+        # Make sure LSP is enabled.
+        lsp-enable-window
+        # Define the format command for this buffer to be executed from the buffer's directory.
+        set buffer formatcmd goimports
+
+        hook -group goimports buffer BufWritePre .* %{
+            try %{ lsp-code-action-sync "Organize Imports" }
+            lsp-formatting-sync
+        }
+    }
+
+    # When kakoune concludes that a file is go, do the following.
+    hook global WinSetOption filetype=(c|cpp) %{
+        # Make sure LSP is enabled.
+        lsp-enable-window
+    }
 }
 
 # Trick plug.kak into managing my installed version of gopls.
@@ -47,6 +76,7 @@ set-option global tabstop 4
 # Use 4 spaces to indent.
 set-option global indentwidth 4
 
+# Insert spaces equivalent to a tab.
 hook global InsertChar \t %{ try %{
       execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
 }}
@@ -75,48 +105,7 @@ map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<re
 # Easy way to look at tool debug output.
 map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
 
-# Easy keybinding for renaming symbols.
-map -docstring "rename symbol" global user r ':lsp-rename-prompt<ret>'
-
-# Easy keybinding to access LSP functionality.
-map -docstring "lsp mode" global user l ':enter-user-mode lsp<ret>'
-
-# Define keyboard interop referenced above.
-define-command -override -docstring "copy main selection to X11 clipboard" xcopy %{
-    nop %sh{ (echo -n "$kak_selection" | xclip -i -f -selection primary | xclip -i -selection clipboard) < /dev/null > /dev/null 2>&1 & }
-}
-define-command -override -docstring "paste X11 clipboard at cursor" xpaste %{
-    exec \i %sh{ xclip -selection clipboard -o } <esc>
-}
-
-# When kakoune concludes that a file is go, do the following.
-hook global WinSetOption filetype=go %{
-    # Make sure LSP is enabled.
-    lsp-enable-window
-    # Request doc text on hover.
-    lsp-auto-hover-enable
-    # # Help with the signatures of symbols in the status bar.
-    # lsp-auto-signature-help-enable
-    # Disable builtin Go formatting hooks that often disrupt my editing
-    # (you may wish to leave these on).
-    remove-hooks window go-insert
-
-    # Define the format command for this buffer to be executed from the buffer's directory.
-    set buffer formatcmd goimports
-
-    hook -group goimports buffer BufWritePre .* %{
-        try %{ lsp-code-action-sync "Organize Imports" }
-        lsp-formatting-sync
-    }
-}
-
-# When kakoune concludes that a file is go, do the following.
-hook global WinSetOption filetype=(c|cpp) %{
-    # Make sure LSP is enabled.
-    lsp-enable-window
-    # Request doc text on hover.
-    lsp-auto-hover-enable
-}
+map -docstring "fzf mode" global user f ': fzf-mode<ret>'
 
 # Use system's clipboard
 hook global NormalKey y %{ nop %sh{
