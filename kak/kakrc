@@ -2,79 +2,14 @@ colorscheme desertex
 # Configure plug.kak
 source "%val{config}/plugins/plug.kak/rc/plug.kak"
 
-# Trick plug.kak into updating itself as a plugin.
-plug "andreyorst/plug.kak" noload
-
-plug "whereswaldon/shellcheck.kak"
-
-plug "andreyorst/fzf.kak"
-
-# Use plug.kak to manage installed version of kak-lsp.
-# note that this requires a modern rust toolchain on the
-# system, and updates may sometimes fail until you do
-# a `rustup update` or similar.
-plug "kak-lsp/kak-lsp" do %{
-    cargo install --locked --force --path .
-    echo DONE
-} config %{
-    # Add a simple way to restart the lsp server. This can be necessary
-    # when creating totally new files/packages, as lsp sometimes gets
-    # confused and offers incorrect completions. I believe it's a gopls
-    # bug rather than a kakoune one.
-    define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
-    # Set contextual information to anchor to the cursor instead of the
-    # bottom-right corner. You may prefer this off instead.
-    set-option global lsp_hover_anchor true
-    # Cap the maximum lines of documentation that lsp will display. I
-    # find that values higher than this mean that symbols with lots of
-    # docs make it impossible to read my code. Too much is covered up
-    # by the docs.
-    set-option global lsp_hover_max_lines 15
-    # This highlights references to the variable under the cursor wherever
-    # they appear. You may or may not find this useful.
-    set-option global lsp_auto_highlight_references true
-    # Easy keybinding for renaming symbols.
-    map -docstring "rename symbol" global user r ' :lsp-rename-prompt<ret>'
-
-    # Easy keybinding to access LSP functionality.
-    map -docstring "lsp mode" global user l ' :enter-user-mode lsp<ret>'
-
-    # Show hover information in a buffer in the docs client.
-    lsp-auto-hover-enable %opt{docsclient}
-
-    # When kakoune concludes that a file is go, do the following.
-    hook global WinSetOption filetype=go %{
-        # Make sure LSP is enabled.
-        lsp-enable-window
-        # Define the format command for this buffer to be executed from the buffer's directory.
-        set buffer formatcmd goimports
-
-        hook -group goimports buffer BufWritePre .* %{
-            try %{ lsp-code-action-sync "Organize Imports" }
-            lsp-formatting-sync
-        }
-    }
-
-    # When kakoune concludes that a file is go, do the following.
-    hook global WinSetOption filetype=(c|cpp) %{
-        # Make sure LSP is enabled.
-        lsp-enable-window
-    }
-}
-
-# Trick plug.kak into managing my installed version of gopls.
-plug "golang/tools" noload do %{
-    go install -v golang.org/x/tools/gopls@latest
-    go install -v golang.org/x/tools/cmd/goimports@latest
-    echo DONE
-}
-
 # Do not use tabs for the & align command.
 set-option global aligntab false
 # Display tabs with a width of 4.
 set-option global tabstop 4
 # Use 4 spaces to indent.
 set-option global indentwidth 4
+# Use a client called 'docs' for displaying documentation.
+set-option global docsclient docs
 
 # Insert spaces equivalent to a tab.
 hook global InsertChar \t %{ try %{
@@ -102,10 +37,78 @@ hook global WinCreate .* %{
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
 map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
 
+# Trick plug.kak into updating itself as a plugin.
+plug "andreyorst/plug.kak" noload
+
+plug "whereswaldon/shellcheck.kak"
+
+plug "andreyorst/fzf.kak"
+
+# Use plug.kak to manage installed version of kak-lsp.
+# note that this requires a modern rust toolchain on the
+# system, and updates may sometimes fail until you do
+# a `rustup update` or similar.
+plug "kak-lsp/kak-lsp" do %{
+    cargo install --locked --force --path .
+    echo DONE
+} config %{
+    # Add a simple way to restart the lsp server. This can be necessary
+    # when creating totally new files/packages, as lsp sometimes gets
+    # confused and offers incorrect completions. I believe it's a gopls
+    # bug rather than a kakoune one.
+    define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
+    # Set contextual information to anchor to the cursor instead of the
+    # bottom-right corner. You may prefer this off instead.
+    #set-option global lsp_hover_anchor true
+    # Cap the maximum lines of documentation that lsp will display. I
+    # find that values higher than this mean that symbols with lots of
+    # docs make it impossible to read my code. Too much is covered up
+    # by the docs.
+    set-option global lsp_hover_max_lines 15
+    # This highlights references to the variable under the cursor wherever
+    # they appear. You may or may not find this useful.
+    set-option global lsp_auto_highlight_references true
+    # Easy keybinding for renaming symbols.
+    map -docstring "rename symbol" global user r ': lsp-rename-prompt<ret>'
+
+    # Easy keybinding to access LSP functionality.
+    map -docstring "lsp mode" global user l ': enter-user-mode lsp<ret>'
+
+    # Display hover docs in the docs client.
+    lsp-auto-hover-enable %opt{docsclient}
+
+    # When kakoune concludes that a file is go, do the following.
+    hook global WinSetOption filetype=go %{
+        # Make sure LSP is enabled.
+        lsp-enable-window
+
+        hook -group goimports buffer BufWritePre .* %{
+            try %{ lsp-code-action-sync "Organize Imports" }
+            lsp-formatting-sync
+        }
+    }
+
+    # When kakoune concludes that a file is go, do the following.
+    hook global WinSetOption filetype=(c|cpp) %{
+        # Make sure LSP is enabled.
+        lsp-enable-window
+    }
+}
+
+# Trick plug.kak into managing my installed version of gopls.
+plug "golang/tools" noload do %{
+    go install -v golang.org/x/tools/gopls@latest
+    go install -v golang.org/x/tools/cmd/goimports@latest
+    echo DONE
+}
+
 # Easy way to look at tool debug output.
-map -docstring "jump to debug buffer" global user d ':b *debug*<ret>'
+map -docstring "jump to debug buffer" global user d ': b *debug*<ret>'
 
 map -docstring "fzf mode" global user f ': fzf-mode<ret>'
+
+map -docstring "show whitespace" global user w ": add-highlighter window/ show-whitespaces<ret>"
+map -docstring "hide whitespace" global user W ": remove-highlighter window/show-whitespaces<ret>"
 
 # Use system's clipboard
 hook global NormalKey y %{ nop %sh{
