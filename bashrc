@@ -43,9 +43,12 @@ export GOPATH="$HOME/Code/go"
 pathprepend "$HOME/.local/bin"
 pathappend "$HOME/.nix_profile/bin"
 pathappend "$GOPATH/bin"
+pathappend "$HOME/.cargo/bin"
 
 export EDITOR="$(which kak)"
 export XML_CATALOG_FILES=/usr/local/etc/xml/catalog
+export MOZ_ENABLE_WAYLAND=1
+export MOZ_DBUS_REMOTE=1
 
 export XDG_CONFIG_HOME="$HOME/.config"
 
@@ -60,15 +63,15 @@ if [ -f "$HOME/.config/tweak-env" ]; then
     . "$HOME/.config/tweak-env"
 fi
 
-export PATH="$HOME/.cargo/bin:$PATH"
+[[ $- != *i* ]] && return
+
+eval $(ssh-agent -s)
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-[[ $- != *i* ]] && return
-
 default_tmux="base"
-if [ -z "$TMUX" ] ; then
-    # launch tmux if it isn't running
+if [ -z "$TMUX" ] && [ -n "$WAYLAND_DISPLAY" ] ; then
+    # launch tmux if it isn't running and there's a desktop session
     if tmux ls |& grep $default_tmux 2>&1 >/dev/null ; then
         # attach to default session if it exists
         tmux attach -t $default_tmux
