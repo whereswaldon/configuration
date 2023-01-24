@@ -11,14 +11,6 @@ set-option global indentwidth 4
 # Use a client called 'docs' for displaying documentation.
 set-option global docsclient docs
 
-# Insert spaces equivalent to a tab.
-hook global InsertChar \t %{ try %{
-      execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
-}}
-hook global InsertDelete ' ' %{ try %{
-      execute-keys -draft 'h<a-h><a-k>\A\h+\z<ret>i<space><esc><lt>'
-}}
-
 # Do not let the cursor get closer than 4 lines from the top or bottom
 # of the view. Scroll instead.
 set-option global scrolloff 4,4
@@ -44,14 +36,13 @@ plug "whereswaldon/shellcheck.kak"
 
 plug "andreyorst/fzf.kak"
 
+plug "eraserhd/kak-ansi"
+
 # Use plug.kak to manage installed version of kak-lsp.
 # note that this requires a modern rust toolchain on the
 # system, and updates may sometimes fail until you do
 # a `rustup update` or similar.
-plug "kak-lsp/kak-lsp" do %{
-    cargo install --locked --force --path .
-    echo DONE
-} config %{
+plug "kak-lsp/kak-lsp" config %{
     # Add a simple way to restart the lsp server. This can be necessary
     # when creating totally new files/packages, as lsp sometimes gets
     # confused and offers incorrect completions. I believe it's a gopls
@@ -59,7 +50,7 @@ plug "kak-lsp/kak-lsp" do %{
     define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
     # Set contextual information to anchor to the cursor instead of the
     # bottom-right corner. You may prefer this off instead.
-    #set-option global lsp_hover_anchor true
+    set-option global lsp_hover_anchor true
     # Cap the maximum lines of documentation that lsp will display. I
     # find that values higher than this mean that symbols with lots of
     # docs make it impossible to read my code. Too much is covered up
@@ -73,9 +64,14 @@ plug "kak-lsp/kak-lsp" do %{
 
     # Easy keybinding to access LSP functionality.
     map -docstring "lsp mode" global user l ': enter-user-mode lsp<ret>'
+    map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
+    map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+    map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+    map global object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
+    map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
 
     # Display hover docs in the docs client.
-    lsp-auto-hover-enable %opt{docsclient}
+    map -docstring "docsclient" global user D ': new "rename-client %opt{docsclient}"; lsp-auto-hover-enable %opt{docsclient}<ret>'
 
     # When kakoune concludes that a file is go, do the following.
     hook global WinSetOption filetype=go %{
@@ -89,17 +85,10 @@ plug "kak-lsp/kak-lsp" do %{
     }
 
     # When kakoune concludes that a file is go, do the following.
-    hook global WinSetOption filetype=(c|cpp) %{
+    hook global WinSetOption filetype=(c|cpp|zig) %{
         # Make sure LSP is enabled.
         lsp-enable-window
     }
-}
-
-# Trick plug.kak into managing my installed version of gopls.
-plug "golang/tools" noload do %{
-    go install -v golang.org/x/tools/gopls@latest
-    go install -v golang.org/x/tools/cmd/goimports@latest
-    echo DONE
 }
 
 # Easy way to look at tool debug output.
@@ -115,3 +104,6 @@ hook global NormalKey y %{ nop %sh{
   printf %s "$kak_main_reg_dquote" | wl-copy > /dev/null 2>&1 &
 }}
 
+hook global WinSetOption filetype=go %{
+    remove-hooks window go-closing-delimiter-insert
+}
