@@ -1,21 +1,4 @@
 colorscheme desertex
-# Configure plug.kak
-source "%val{config}/plugins/plug.kak/rc/plug.kak"
-
-# Do not use tabs for the & align command.
-set-option global aligntab false
-# Display tabs with a width of 4.
-set-option global tabstop 4
-# Use 4 spaces to indent.
-set-option global indentwidth 4
-# Use a client called 'docs' for displaying documentation.
-set-option global docsclient docs
-
-# Do not let the cursor get closer than 4 lines from the top or bottom
-# of the view. Scroll instead.
-set-option global scrolloff 4,4
-# Use ripgrep to power the :grep command.
-set-option global grepcmd 'rg -SHn'
 
 # Configure settings I always want on.
 hook global WinCreate .* %{
@@ -25,72 +8,15 @@ hook global WinCreate .* %{
     add-highlighter window/ wrap -word -indent
 }
 
+# Do not let the cursor get closer than 4 lines from the top or bottom
+# of the view. Scroll instead.
+set-option global scrolloff 12,4
+# Use ripgrep to power the :grep command.
+set-option global grepcmd 'rg -SHn'
+
 # Easy way to open/edit config
 map -docstring "edit kakrc" global user e :e<space>~/.config/kak/kakrc<ret>
 map -docstring "source kakrc" global user s :source<space>~/.config/kak/kakrc<ret>
-
-# Trick plug.kak into updating itself as a plugin.
-plug "andreyorst/plug.kak" noload
-
-plug "whereswaldon/shellcheck.kak"
-
-plug "andreyorst/fzf.kak"
-
-plug "eraserhd/kak-ansi"
-
-# Use plug.kak to manage installed version of kak-lsp.
-# note that this requires a modern rust toolchain on the
-# system, and updates may sometimes fail until you do
-# a `rustup update` or similar.
-plug "kak-lsp/kak-lsp" config %{
-    # Add a simple way to restart the lsp server. This can be necessary
-    # when creating totally new files/packages, as lsp sometimes gets
-    # confused and offers incorrect completions. I believe it's a gopls
-    # bug rather than a kakoune one.
-    define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
-    # Set contextual information to anchor to the cursor instead of the
-    # bottom-right corner. You may prefer this off instead.
-    set-option global lsp_hover_anchor true
-    # Cap the maximum lines of documentation that lsp will display. I
-    # find that values higher than this mean that symbols with lots of
-    # docs make it impossible to read my code. Too much is covered up
-    # by the docs.
-    set-option global lsp_hover_max_lines 15
-    # This highlights references to the variable under the cursor wherever
-    # they appear. You may or may not find this useful.
-    set-option global lsp_auto_highlight_references true
-    # Easy keybinding for renaming symbols.
-    map -docstring "rename symbol" global user r ': lsp-rename-prompt<ret>'
-
-    # Easy keybinding to access LSP functionality.
-    map -docstring "lsp mode" global user l ': enter-user-mode lsp<ret>'
-    map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
-    map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
-    map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
-    map global object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
-    map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
-
-    # Display hover docs in the docs client.
-    map -docstring "docsclient" global user D ': new "rename-client %opt{docsclient}"; lsp-auto-hover-enable %opt{docsclient}<ret>'
-
-    # When kakoune concludes that a file is go, do the following.
-    hook global WinSetOption filetype=go %{
-        # Make sure LSP is enabled.
-        lsp-enable-window
-
-        hook -group goimports buffer BufWritePre .* %{
-            try %{ lsp-code-action-sync "Organize Imports" }
-            lsp-formatting-sync
-        }
-    }
-
-    # When kakoune concludes that a file is go, do the following.
-    hook global WinSetOption filetype=(c|cpp|zig) %{
-        # Make sure LSP is enabled.
-        lsp-enable-window
-    }
-}
-
 # Easy way to look at tool debug output.
 map -docstring "jump to debug buffer" global user d ': b *debug*<ret>'
 
@@ -104,6 +30,66 @@ hook global NormalKey y %{ nop %sh{
   printf %s "$kak_main_reg_dquote" | wl-copy > /dev/null 2>&1 &
 }}
 
-hook global WinSetOption filetype=go %{
-    remove-hooks window go-closing-delimiter-insert
+# Load plugins.
+source "%val{config}/plugins/shellcheck.kak/shellcheck.kak"
+source "%val{config}/plugins/fzf.kak/rc/fzf.kak"
+
+# Manually load and configure kak-lsp
+eval %sh{kak-lsp --kakoune -s $kak_session}
+# Add a simple way to restart the lsp server. This can be necessary
+# when creating totally new files/packages, as lsp sometimes gets
+# confused and offers incorrect completions. I believe it's a gopls
+# bug rather than a kakoune one.
+define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
+# Set contextual information to anchor to the cursor instead of the
+# bottom-right corner. You may prefer this off instead.
+# set-option global lsp_hover_anchor true
+# Cap the maximum lines of documentation that lsp will display. I
+# find that values higher than this mean that symbols with lots of
+# docs make it impossible to read my code. Too much is covered up
+# by the docs.
+set-option global lsp_hover_max_lines 10
+#
+# This highlights references to the variable under the cursor wherever
+# they appear. You may or may not find this useful.
+#set-option global lsp_auto_highlight_references true
+#
+# Easy keybinding for renaming symbols.
+map -docstring "rename symbol" global user r ': lsp-rename-prompt<ret>'
+
+# Easy keybinding to access LSP functionality.
+map -docstring "lsp mode" global user l ': enter-user-mode lsp<ret>'
+map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
+map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+map global object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
+map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
+
+# Display hover docs in the docs client.
+# map -docstring "docsclient" global user D ': new "rename-client %opt{docsclient}"; lsp-auto-hover-enable %opt{docsclient}<ret>'
+
+# When kakoune concludes that a file is c, C++, or Zig, do the following.
+hook global WinSetOption filetype=(c|cpp|zig) %{
+    # Make sure LSP is enabled.
+    lsp-enable-window
 }
+
+# Go-specific options
+hook global WinSetOption filetype=go %{
+    # Suppress annoying auto-close hook.
+    remove-hooks window go-closing-delimiter-insert
+    lsp-enable-window
+    lsp-auto-hover-enable
+    hook -group goimports buffer BufWritePre .* %{
+        try %{ lsp-code-action-sync "Organize Imports" }
+        lsp-formatting-sync
+    }
+}
+
+# Do not use tabs for the & align command.
+set-option global aligntab false
+# Display tabs with a width of 4.
+set-option global tabstop 4
+# Use 4 spaces to indent.
+set-option global indentwidth 4
+
