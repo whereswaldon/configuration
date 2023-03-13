@@ -21,11 +21,3 @@ symlink "$HOME/.tmux.conf" "$BASEDIR/tmux.conf"
 symlink "$HOME/.gitconfig" "$BASEDIR/gitconfig"
 symlink "$HOME/.config/kak" "$BASEDIR/kak"
 symlink "$HOME/.local/bin/penv" "$BASEDIR/bin/penv"
-
-# ensure plug.kak exists
-PLUG_KAK_PATH="$BASEDIR/kak/plugins/plug.kak"
-PLUG_KAK_URL="https://github.com/andreyorst/plug.kak"
-PLUG_KAK_BRANCH="dev"
-if ! [ -e "$PLUG_KAK_PATH" ] ; then
-    git clone "$PLUG_KAK_URL" --branch "$PLUG_KAK_BRANCH" "$PLUG_KAK_PATH"
-fi
