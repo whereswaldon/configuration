@@ -12,9 +12,10 @@ function symlink {
         mv -v "$target" "$target-waldon-backup";
     fi
     # overwrite symlink
-    ln -svTnf "$(realpath "$source")" "$target"
+    ln -svnf "$(realpath "$source")" "$target"
 }
 
+mkdir -p "$HOME/".{local/{bin,lib},config}
 symlink "$HOME/.bash_profile" "$BASEDIR/bash_profile"
 symlink "$HOME/.bashrc" "$BASEDIR/bashrc"
 symlink "$HOME/.tmux.conf" "$BASEDIR/tmux.conf"
