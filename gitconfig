@@ -5,6 +5,40 @@
 	email = christopher.waldon.dev@gmail.com
 	signingkey = 35BBC7C073F5A5D3
 [commit]
-	gpgsign = true
+	verbose = true
+#	gpgsign = true
 [gpg]
 	program = gpg2
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+[init]
+	defaultBranch = main
+[sendemail]
+	smtpserver = smtp.gmail.com
+	smtpuser = christopher.waldon.dev@gmail.com
+	smtpencryption = tls
+	smtpserverport = 587
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[column]
+	ui = auto
+[branch]
+	sort = -committerdate
+[tag]
+	sort = version:refname
+[diff]
+	algorithm = histogram
+	colorMoved = plain
+	mnemonicPrefix = true
+	renames = true
+[push]
+	default = simple
+	autoSetupRemote = true
+[help]
+	autocorrect = prompt
+[rerere]
+	enabled = true
+	autoupdate = true
