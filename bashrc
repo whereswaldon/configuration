@@ -65,20 +65,21 @@ fi
 
 [[ $- != *i* ]] && return
 
-eval $(ssh-agent -s)
+if [[ -z "$SSH_CONNECTION" ]]; then
+    export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+fi
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-default_tmux="base"
-if [ "$(uname)" = "Darwin" ] || [ -n "$WAYLAND_DISPLAY" ] ; then
-    if [ -z "$TMUX" ] ; then
-        # launch tmux if it isn't running and there's a desktop session
-        if tmux ls |& grep $default_tmux 2>&1 >/dev/null ; then
-            # attach to default session if it exists
-            tmux attach -t $default_tmux
-        else
-            tmux new-session -t $default_tmux
-        fi
-    fi
-fi
+exec fish
+#default_tmux="base"
+#if [ -z "$TMUX" ] && [ -n "$WAYLAND_DISPLAY" ] ; then
+#    # launch tmux if it isn't running and there's a desktop session
+#    if tmux ls |& grep $default_tmux 2>&1 >/dev/null ; then
+#        # attach to default session if it exists
+#        tmux attach -t $default_tmux
+#    else
+#        tmux new-session -t $default_tmux
+#    fi
+#fi
 
