@@ -24,23 +24,68 @@ map -docstring "fzf mode" global user f ': fzf-mode<ret>'
 
 map -docstring "show whitespace" global user w ": add-highlighter window/ show-whitespaces<ret>"
 map -docstring "hide whitespace" global user W ": remove-highlighter window/show-whitespaces<ret>"
+map -docstring "decompress clipboard to scratch" global user Z ": e -scratch<ret>|wl-paste -t TEXT|base64 -d|gunzip<ret>"
+map -docstring "enable LSP inlay hints" global user h ": lsp-inlay-hints-enable global<ret>"
+map -docstring "disable LSP inlay hints" global user H ": lsp-inlay-hints-disable global<ret>"
+map -docstring "open new window" global user n ": new<ret>"
+map -docstring "open utility window for docs and tools" global user N ': new ''set global docsclient %val{client}; set global toolsclient %val{client}''<ret>'
+map -docstring "make current client docsclient" global user D ': set global docsclient %val{client}<ret>'
+map -docstring "make current client toolsclient" global user T ': set global toolsclient %val{client}<ret>'
 
 # Use system's clipboard
 hook global NormalKey y %{ nop %sh{
   printf %s "$kak_main_reg_dquote" | wl-copy > /dev/null 2>&1 &
 }}
 
+define-command -docstring "Remove ANSI escape sequences from buffer" strip-ansi %{
+    execute-keys -draft '%|sed<space>''s/\x1b\[[0-9;]*m//g''<ret>'
+}
+
 # Load plugins.
 source "%val{config}/plugins/shellcheck.kak/shellcheck.kak"
 source "%val{config}/plugins/fzf.kak/rc/fzf.kak"
+source "%val{config}/plugins/infertab.kak/infertab.kak"
+
+
+## Define global indentation settings to be overridden per-buffer.
+## Do not use tabs for the & align command.
+set-option global aligntab false
+## Display tabs with a width of 4.
+set-option global tabstop 4
+## Use 4 spaces to indent.
+set-option global indentwidth 4
+
+# Automatically configure tab width for new buffers.
+hook global BufCreate /.* %{
+    require-module infertab
+    infertab
+}
+
+hook global InsertChar \t %{ try %{
+  execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
+}}
+
+hook global InsertDelete ' ' %{ try %{
+  execute-keys -draft 'h<a-h><a-k>\A\h+\z<ret>i<space><esc><lt>'
+}}
 
 # Manually load and configure kak-lsp
 eval %sh{kak-lsp --kakoune -s $kak_session}
+hook -group lsp-filetype-odin global BufSetOption filetype=odin %{
+    set-option buffer lsp_servers %{
+        [ols]
+        root_globs = [".git"]
+    }
+    lsp-enable
+    hook -group odinfmt buffer BufWritePre .* %{
+        lsp-formatting-sync
+    }
+}
 # Add a simple way to restart the lsp server. This can be necessary
 # when creating totally new files/packages, as lsp sometimes gets
 # confused and offers incorrect completions. I believe it's a gopls
 # bug rather than a kakoune one.
-define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
+#define-command lsp-restart -docstring 'restart lsp server' %{ lsp-stop; lsp-start }
 # Set contextual information to anchor to the cursor instead of the
 # bottom-right corner. You may prefer this off instead.
 # set-option global lsp_hover_anchor true
@@ -57,6 +102,10 @@ set-option global lsp_hover_max_lines 10
 # Easy keybinding for renaming symbols.
 map -docstring "rename symbol" global user r ': lsp-rename-prompt<ret>'
 
+lsp-inlay-hints-enable global
+lsp-inlay-diagnostics-enable global
+lsp-auto-hover-buffer-enable
+
 # Easy keybinding to access LSP functionality.
 map -docstring "lsp mode" global user l ': enter-user-mode lsp<ret>'
 map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
@@ -68,28 +117,41 @@ map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docst
 # Display hover docs in the docs client.
 # map -docstring "docsclient" global user D ': new "rename-client %opt{docsclient}"; lsp-auto-hover-enable %opt{docsclient}<ret>'
 
-# When kakoune concludes that a file is c, C++, or Zig, do the following.
-hook global WinSetOption filetype=(c|cpp|zig) %{
+# When kakoune concludes that a file is Go, C, C++, or Zig, do the following.
+hook global WinSetOption filetype=(go|c|cpp|zig|html) %{
     # Make sure LSP is enabled.
-    lsp-enable-window
+    lsp-enable
 }
 
 # Go-specific options
 hook global WinSetOption filetype=go %{
     # Suppress annoying auto-close hook.
     remove-hooks window go-closing-delimiter-insert
-    lsp-enable-window
-    lsp-auto-hover-enable
     hook -group goimports buffer BufWritePre .* %{
         try %{ lsp-code-action-sync "Organize Imports" }
         lsp-formatting-sync
     }
 }
 
-# Do not use tabs for the & align command.
-set-option global aligntab false
-# Display tabs with a width of 4.
-set-option global tabstop 4
-# Use 4 spaces to indent.
-set-option global indentwidth 4
+# Protobuf-specific options
+hook global WinSetOption filetype=protobuf %{
+    set window lintcmd 'buf lint'
+    hook -group protobuflint buffer BufWritePre .* %{
+        lint
+    }
+}
+
+# Zig-specific options
+hook global WinSetOption filetype=zig %{
+    hook -group zigfmt buffer BufWritePre .* %{
+        lsp-formatting-sync
+    }
+}
+
+# C-specific options
+hook global WinSetOption filetype=(c|cpp) %{
+    hook -group cfmt buffer BufWritePre .* %{
+        lsp-formatting-sync
+    }
+}
 
